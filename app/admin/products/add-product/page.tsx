@@ -15,6 +15,7 @@ export default function AddProductPage() {
     description: "",
     brand: "",
     category: "",
+    productType: "kurti", // Default value added
     price: "",
     discountPrice: "",
     stock: "",
@@ -28,34 +29,26 @@ export default function AddProductPage() {
     { size: "M", stock: 10 },
   ]);
 
-  // Selected actual files array
   const [imageFiles, setImageFiles] = useState<File[]>([]);
-  // Blob previews display karne ke liye temporary URLs list
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle Multiple File Upload (Keeps previous selections intact + Add Previews)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
-      
-      // Purani files ke sath nayi files ko merge (append) kar rahe hain
       setImageFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
-
-      // Nayi select hui files ke temporary object URLs create kar rahe hain
       const newPreviews = selectedFiles.map((file) => URL.createObjectURL(file));
       setImagePreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
     }
   };
 
-  // Single Image remove karne ke liye logic
   const removeImage = (indexToRemove: number) => {
     setImageFiles((prevFiles) => prevFiles.filter((_, index) => index !== indexToRemove));
-    
-    // Memory leak se bachne ke liye URL revoke karna zaroori hai
     URL.revokeObjectURL(imagePreviews[indexToRemove]);
     setImagePreviews((prevPreviews) => prevPreviews.filter((_, index) => index !== indexToRemove));
   };
@@ -95,9 +88,11 @@ export default function AddProductPage() {
     try {
       const dataPayload = new FormData();
       Object.entries(formData).forEach(([key, value]) => dataPayload.append(key, value));
-      dataPayload.append("sizes", JSON.stringify(sizes));
-      
-      // Saari selected images append ho rahi hain automatic 'images' field name ke array key par
+
+      // Saree ke liye empty array, baaki ke liye actual sizes array pass hoga
+      const finalSizes = formData.productType === "saree" ? [] : sizes;
+      dataPayload.append("sizes", JSON.stringify(finalSizes));
+
       imageFiles.forEach((file) => dataPayload.append("images", file));
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/add`, {
@@ -158,10 +153,22 @@ export default function AddProductPage() {
 
             <div>
               <label className="text-sm font-semibold text-slate-800">Category</label>
-              <input type="text" name="category" required value={formData.category} onChange={handleChange} placeholder="Kurtiya" className="w-full mt-1.5 p-3 text-slate-900 placeholder:text-slate-400 bg-white rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-black text-sm" />
+              <input type="text" name="category" required value={formData.category} onChange={handleChange} placeholder="Ethnic Wear" className="w-full mt-1.5 p-3 text-slate-900 placeholder:text-slate-400 bg-white rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-black text-sm" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Product Type Dropdown */}
+            <div>
+              <label className="text-sm font-semibold text-slate-800">Product Type</label>
+              <select name="productType" value={formData.productType} onChange={handleChange} className="w-full mt-1.5 p-3 text-slate-900 bg-white rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-black text-sm capitalize">
+                {["kurti", "saree", "top", "shirt", "dress", "jeans", "other"].map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:col-span-2">
               <div>
                 <label className="text-sm font-semibold text-slate-800">Price</label>
                 <input type="number" name="price" required value={formData.price} onChange={handleChange} placeholder="1000" className="w-full mt-1.5 p-3 text-slate-900 placeholder:text-slate-400 bg-white rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-black text-sm" />
@@ -182,26 +189,28 @@ export default function AddProductPage() {
             <textarea name="description" required rows={3} value={formData.description} onChange={handleChange} placeholder="Product features and specifications..." className="w-full mt-1.5 p-3 text-slate-900 placeholder:text-slate-400 bg-white rounded-xl border border-slate-300 outline-none focus:ring-2 focus:ring-black resize-none text-sm" />
           </div>
 
-          {/* Dynamic Sizes Section */}
-          <div className="border border-slate-200 bg-slate-50/50 rounded-2xl p-4">
-            <div className="flex justify-between items-center mb-3">
-              <label className="text-sm font-semibold text-slate-800">Product Sizes & Stock Variant</label>
-              <button type="button" onClick={addSizeField} className="text-xs sm:text-sm bg-black text-white px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-slate-800 transition">
-                <Plus size={14} /> Add Variant
-              </button>
-            </div>
-            {sizes.map((item, index) => (
-              <div key={index} className="flex gap-2 sm:gap-4 items-center mt-2">
-                <input type="text" required placeholder="Size (e.g. M, L)" value={item.size} onChange={(e) => handleSizeChange(index, "size", e.target.value)} className="w-1/2 p-2.5 text-slate-900 bg-white rounded-xl border border-slate-300 outline-none text-sm" />
-                <input type="number" required placeholder="Stock" value={item.stock} onChange={(e) => handleSizeChange(index, "stock", e.target.value)} className="w-1/2 p-2.5 text-slate-900 bg-white rounded-xl border border-slate-300 outline-none text-sm" />
-                {sizes.length > 1 && (
-                  <button type="button" onClick={() => removeSizeField(index)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition shrink-0">
-                    <Trash2 size={18} />
-                  </button>
-                )}
+          {/* Dynamic Sizes Section (Saree ke liye HIDE ho jayega) */}
+          {formData.productType !== "saree" && (
+            <div className="border border-slate-200 bg-slate-50/50 rounded-2xl p-4">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-sm font-semibold text-slate-800">Product Sizes & Stock Variant</label>
+                <button type="button" onClick={addSizeField} className="text-xs sm:text-sm bg-black text-white px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-slate-800 transition">
+                  <Plus size={14} /> Add Variant
+                </button>
               </div>
-            ))}
-          </div>
+              {sizes.map((item, index) => (
+                <div key={index} className="flex gap-2 sm:gap-4 items-center mt-2">
+                  <input type="text" required placeholder="Size (e.g. M, L)" value={item.size} onChange={(e) => handleSizeChange(index, "size", e.target.value)} className="w-1/2 p-2.5 text-slate-900 bg-white rounded-xl border border-slate-300 outline-none text-sm" />
+                  <input type="number" required placeholder="Stock" value={item.stock} onChange={(e) => handleSizeChange(index, "stock", e.target.value)} className="w-1/2 p-2.5 text-slate-900 bg-white rounded-xl border border-slate-300 outline-none text-sm" />
+                  {sizes.length > 1 && (
+                    <button type="button" onClick={() => removeSizeField(index)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition shrink-0">
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Toggle Switches */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-200">
@@ -226,7 +235,6 @@ export default function AddProductPage() {
               <p className="text-[11px] text-slate-400 mt-0.5">Select multiple images at once or one by one</p>
             </div>
 
-            {/* Grid display for uploaded Image Previews */}
             {imagePreviews.length > 0 && (
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
                 {imagePreviews.map((previewUrl, index) => (
