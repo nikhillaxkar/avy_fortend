@@ -8,12 +8,12 @@ const jakarta = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700", "800"],
 });
 export const metadata: Metadata = {
-  title: "STYLE HUB | Fashion & Clothing Store",
+  title: "AVY FASHION GROUP | Fashion & Clothing Store",
   description:
-    "Discover the latest fashion trends and shop stylish clothing at STYLE HUB.",
+    "Discover the latest fashion trends and shop stylish clothing at AVY FASHION GROUP.",
 
   icons: {
-    icon: "/icon.png",
+    icon: "/avy_logo.png",
   },
 };
 
